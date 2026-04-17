@@ -1,0 +1,1 @@
+﻿src/Birkfield.ts(3,30): error TS1484: 'MainParticleSystem' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.

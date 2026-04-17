@@ -1,0 +1,34 @@
+{
+  "name": "@birkfield/core",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./dist/birkfield-core.umd.js",
+  "module": "./dist/birkfield-core.es.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/birkfield-core.es.js",
+      "require": "./dist/birkfield-core.umd.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build && tsc --emitDeclarationOnly"
+  },
+  "peerDependencies": {
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vite": "^8.0.0",
+    "@types/three": "^0.184.0"
+  },
+  "author": "Adam Birkner",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

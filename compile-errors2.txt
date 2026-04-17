@@ -1,0 +1,19 @@
+﻿src/main.ts(5,27): error TS6133: 'createBucket' is declared but its value is never read.
+src/main.ts(7,30): error TS6133: 'activeScrollState' is declared but its value is never read.
+src/main.ts(10,29): error TS1484: 'ObjectTargetStates' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/main.ts(12,1): error TS6133: 'SeededRandom' is declared but its value is never read.
+src/main.ts(65,26): error TS6133: 'progress' is declared but its value is never read.
+src/motion/idleMotion.ts(2,10): error TS1484: 'BucketState' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/objects/buildObjectTarget.ts(2,10): error TS1484: 'SampledPoint' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/objects/normalizePointSet.ts(1,10): error TS1484: 'SampledPoint' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/objects/normalizePointSet.ts(3,1): error TS6133: 'THREE' is declared but its value is never read.
+src/objects/objectRegistry.ts(2,10): error TS1484: 'ObjectDefinition' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/particles/bucketTypes.ts(2,1): error TS6133: 'SampledPoint' is declared but its value is never read.
+src/particles/bucketTypes.ts(2,10): error TS1484: 'SampledPoint' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/particles/createBucket.ts(2,10): error TS1484: 'BucketState' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/particles/createBucket.ts(3,10): error TS1484: 'SampledPoint' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/particles/particleSystem.ts(2,10): error TS1484: 'BucketState' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/particles/updateBucket.ts(2,10): error TS1484: 'BucketState' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/primitives/samplers.ts(2,10): error TS1484: 'SampledPoint' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/primitives/samplers.ts(2,24): error TS1484: 'PrimitiveConfig' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/sections/computeSectionProgress.ts(1,24): error TS1484: 'SectionDef' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
