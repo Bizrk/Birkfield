@@ -1,7 +1,7 @@
 import './style.css';
-import { Birkfield } from '@birkfield/core';
+import { Birkfield } from '@bizrk/birkfield';
 import { objectRegistry } from './objects/objectRegistry';
-import { initGLTFImporter } from '@birkfield/core';
+import { initGLTFImporter } from '@bizrk/birkfield';
 
 // Initialize the hidden overlay tool if '?registerobject=true' is in the URL
 initGLTFImporter();
@@ -17,8 +17,8 @@ if (container) {
     bucketSize: 5000,
     defaultConfig: {
       bgShape: 'ringCluster',
-      bgColor1: '#111122',
-      bgColor2: '#221122',
+      bgColor1Dark: '#111122',
+      bgColor2Dark: '#221122',
       bgSize: 0.5,
       bgBloom: 1.0,
       bgTransitionSpeed: 2.0,
@@ -47,7 +47,7 @@ if (container) {
 
   document.addEventListener('keydown', (e) => {
     if (e.key.toLowerCase() === 'm') {
-      import('@birkfield/core').then(m => {
+      import('@bizrk/birkfield').then(m => {
         if (!document.getElementById('birkfield-modifier-panel')) {
            m.initModifierPanel(app);
         }
@@ -56,6 +56,17 @@ if (container) {
   });
 
   if (window.location.search.toLowerCase().includes('modifyobject=true') || window.location.search.toLowerCase().includes('birkfielddebug=true')) {
-    import('@birkfield/core').then(m => m.initModifierPanel(app));
+    import('@bizrk/birkfield').then(m => m.initModifierPanel(app));
+  }
+
+  // Wire up the theme toggle demo
+  let isLightMode = false;
+  const themeBtn = document.getElementById('theme-btn');
+  if (themeBtn) {
+    themeBtn.addEventListener('click', () => {
+      isLightMode = !isLightMode;
+      document.body.classList.toggle('light-mode', isLightMode);
+      app.setTheme(isLightMode ? 'light' : 'dark');
+    });
   }
 }

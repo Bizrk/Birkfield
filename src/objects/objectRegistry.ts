@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import type { ObjectDefinition } from '@birkfield/core';
-import { sampleSphere, sampleBox, sampleCylinder, sampleTorus } from '@birkfield/core';
+import type { ObjectDefinition } from '@bizrk/birkfield';
+import { sampleSphere, sampleBox, sampleCylinder, sampleTorus } from '@bizrk/birkfield';
 
 export const objectRegistry: Record<string, ObjectDefinition> = {
   // Paste this definition into src/objects/objectRegistry.ts inside the objectRegistry:

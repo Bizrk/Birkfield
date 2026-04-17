@@ -14,7 +14,7 @@
     "vite": "^8.0.4"
   },
   "dependencies": {
-    "@birkfield/core": "*",
+    "@bizrk/birkfield": "^1.0.1",
     "three": "^0.184.0"
   },
   "workspaces": [

@@ -105,8 +105,8 @@ export function initModifierPanel(app: Birkfield) {
          exportOverrides.add('backgroundShape');
          
          const allProps = [
-            'fgActivePoints', 'bgActivePoints', 'fgWarpSpeed', 'bgWarpSpeed',
-            'fgSize', 'bgSize', 'fgOpacity', 'bgOpacity', 'fgBloom', 'bgBloom', 
+            'themeMode', 'fgActivePoints', 'bgActivePoints', 'fgWarpSpeed', 'bgWarpSpeed',
+            'fgSizeDark', 'bgSizeDark', 'fgSizeLight', 'bgSizeLight', 'fgOpacity', 'bgOpacity', 'fgBloom', 'bgBloom', 
             'fgJitter', 'bgJitter', 'fgTransitionSpeed', 'bgTransitionSpeed', 
             'fgRotationSpeed', 'bgRotationSpeed', 'foregroundAnchorOffset', 
             'backgroundAnchorOffset', 'foregroundScale', 'backgroundScale',
@@ -141,7 +141,7 @@ export function initModifierPanel(app: Birkfield) {
     lblWrapper.style.gap = '5px';
     
     // Ignore checkboxes on purely custom toggles like 'Preview Mode' or native color pickers
-    if (!['Preview Mode', 'fgColor1', 'fgColor2', 'bgColor1', 'bgColor2', 'fgColor1Light', 'fgColor2Light', 'bgColor1Light', 'bgColor2Light'].includes(prop)) {
+    if (!['Preview Mode', 'Theme Mode', 'fgColorDark1', 'fgColorDark2', 'bgColorDark1', 'bgColorDark2', 'fgColorLight1', 'fgColorLight2', 'bgColorLight1', 'bgColorLight2'].includes(prop)) {
         const chk = document.createElement('input');
         chk.type = 'checkbox';
         chk.checked = exportOverrides.has(prop);
@@ -161,7 +161,7 @@ export function initModifierPanel(app: Birkfield) {
     const inputNode = renderInput();
     
     // Disable styling if not actively checking for an override
-    if (!exportOverrides.has(prop) && !['Preview Mode', 'fgColor1', 'fgColor2', 'bgColor1', 'bgColor2', 'fgColor1Light', 'fgColor2Light', 'bgColor1Light', 'bgColor2Light'].includes(prop)) {
+    if (!exportOverrides.has(prop) && !['Preview Mode', 'Theme Mode', 'fgColorDark1', 'fgColorDark2', 'bgColorDark1', 'bgColorDark2', 'fgColorLight1', 'fgColorLight2', 'bgColorLight1', 'bgColorLight2'].includes(prop)) {
         inputNode.style.opacity = '0.3';
         inputNode.style.pointerEvents = 'none';
         
@@ -253,30 +253,69 @@ export function initModifierPanel(app: Birkfield) {
     accordionsInited = true;
 
     const getTargetAccordion = (prop: string) => {
-        if (prop === 'Preview Mode') return accTheme;
-        if (['foregroundAnchorOffset', 'backgroundAnchorOffset', 'foregroundScale', 'backgroundScale', 'foregroundRotation', 'backgroundRotation', 'fgSize', 'bgSize'].includes(prop)) return accTransforms;
+        if (prop === 'Preview Mode' || prop === 'Theme Mode') return accTheme;
+        if (['foregroundAnchorOffset', 'backgroundAnchorOffset', 'foregroundScale', 'backgroundScale', 'foregroundRotation', 'backgroundRotation', 'fgSizeDark', 'bgSizeDark', 'fgSizeLight', 'bgSizeLight'].includes(prop)) return accTransforms;
         if (['fgTransitionSpeed', 'bgTransitionSpeed', 'fgRotationSpeed', 'bgRotationSpeed', 'fgSpinSpeed', 'bgSpinSpeed', 'fgWarpSpeed', 'bgWarpSpeed', 'fgMouseMax', 'bgMouseMax', 'fgMouse', 'bgMouse'].includes(prop)) return accMotion;
         if (['fgActivePoints', 'bgActivePoints'].includes(prop)) return accDensity;
         return accRendering;
     };
 
-    // Theme Toggle
+    let previewFilter = app.theme as string;
+
+    const applyPreviewFilter = (node: HTMLElement, propName: string) => {
+        if (previewFilter === 'all') return;
+        const isLightProp = propName.toLowerCase().includes('light');
+        const isDarkProp = propName.toLowerCase().includes('dark');
+        const isBloomProp = propName.toLowerCase().includes('bloom');
+       
+        if (previewFilter === 'light' && isDarkProp) node.style.display = 'none';
+        if (previewFilter === 'dark' && isLightProp) node.style.display = 'none';
+        if (previewFilter === 'light' && isBloomProp) node.style.display = 'none';
+    };
+
     getTargetAccordion('Preview Mode').appendChild(createField('Preview Mode', () => {
         const select = document.createElement('select');
         select.style.background = '#222';
         select.style.color = '#fff';
         select.style.border = '1px solid #444';
         
-        ['dark', 'light'].forEach(t => {
+        ['all', 'dark', 'light'].forEach(t => {
             const opt = document.createElement('option');
             opt.value = t;
             opt.innerText = t.toUpperCase();
-            if (app.theme === t) opt.selected = true;
+            if (previewFilter === t) opt.selected = true;
             select.appendChild(opt);
         });
         
         select.onchange = () => {
-            app.setTheme(select.value as 'dark' | 'light');
+            previewFilter = select.value;
+            if (previewFilter !== 'all') {
+                app.setTheme(select.value as 'dark' | 'light');
+            }
+            renderControls(); 
+        };
+        return select;
+    }));
+
+    getTargetAccordion('Theme Mode').appendChild(createField('Theme Mode', () => {
+        const select = document.createElement('select');
+        select.style.background = '#222';
+        select.style.color = '#fff';
+        select.style.border = '1px solid #444';
+        
+        ['auto', 'inverted', 'light', 'dark'].forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t;
+            opt.innerText = t.toUpperCase();
+            if ((activeSectionDef as any).themeMode === t) opt.selected = true;
+            select.appendChild(opt);
+        });
+        
+        select.onchange = () => {
+            if (!exportOverrides.has('themeMode')) exportOverrides.add('themeMode');
+            (activeSectionDef as any).themeMode = select.value;
+            app.activeSectionId = ''; // force update natively
+            renderControls();
         };
         return select;
     }));
@@ -286,7 +325,8 @@ export function initModifierPanel(app: Birkfield) {
         'fgActivePoints', 'bgActivePoints',
         'fgWarpSpeed', 'bgWarpSpeed',
         'fgSpinSpeed', 'bgSpinSpeed',
-        'fgSize', 'bgSize', 'fgOpacity', 'bgOpacity', 
+        'fgSizeDark', 'bgSizeDark', 'fgSizeLight', 'bgSizeLight',
+        'fgOpacity', 'bgOpacity', 
         'fgBloom', 'bgBloom', 'fgJitter', 'bgJitter', 
         'fgTransitionSpeed', 'bgTransitionSpeed', 
         'fgRotationSpeed', 'bgRotationSpeed'
@@ -320,12 +360,15 @@ export function initModifierPanel(app: Birkfield) {
             };
             return input;
         }));
+        
+        const lastAdded = getTargetAccordion(prop).lastElementChild as HTMLElement;
+        if (lastAdded) applyPreviewFilter(lastAdded, prop);
     });
 
     // Color Inputs
     const colorProps = [
-        'fgColor1', 'fgColor2', 'bgColor1', 'bgColor2',
-        'fgColor1Light', 'fgColor2Light', 'bgColor1Light', 'bgColor2Light'
+        'fgColorDark1', 'fgColorDark2', 'bgColorDark1', 'bgColorDark2',
+        'fgColorLight1', 'fgColorLight2', 'bgColorLight1', 'bgColorLight2'
     ];
     colorProps.forEach(prop => {
         getTargetAccordion(prop).appendChild(createField(prop, () => {
@@ -352,23 +395,31 @@ export function initModifierPanel(app: Birkfield) {
 
             chk.onchange = () => {
                 if (chk.checked) {
+                    exportOverrides.add(prop);
                     input.style.display = 'block';
                     (activeSectionDef as any)[prop] = new THREE.Color(input.value);
                 } else {
+                    exportOverrides.delete(prop);
                     input.style.display = 'none';
                     (activeSectionDef as any)[prop] = undefined;
                 }
-                app.setTheme(app.theme); // Force re-bind of arrays
+                (app as any).activeSectionId = '';
+                app.setTheme(app.theme);
             };
 
             input.oninput = () => {
+                exportOverrides.add(prop);
                 (activeSectionDef as any)[prop] = new THREE.Color(input.value);
+                (app as any).activeSectionId = '';
             };
 
             flex.appendChild(chk);
             flex.appendChild(input);
             return flex;
         }));
+        
+        const lastAdded = getTargetAccordion(prop).lastElementChild as HTMLElement;
+        if (lastAdded) applyPreviewFilter(lastAdded, prop);
     });
 
     // Vector/Euler Inputs
@@ -585,8 +636,11 @@ export function initModifierPanel(app: Birkfield) {
     let res = `id="${d.id}"\n`;
     res += cEx('foregroundShape', `data-fg-shape="${d.foregroundShape}"`);
     res += cEx('backgroundShape', `data-bg-shape="${d.backgroundShape}"`);
-    res += cEx('fgSize', `data-fg-size="${d.fgSize}"`);
-    res += cEx('bgSize', `data-bg-size="${d.bgSize}"`);
+    res += cEx('themeMode', `data-theme-mode="${d.themeMode}"`);
+    res += cEx('fgSizeDark', `data-fg-size-dark="${d.fgSizeDark}"`);
+    res += cEx('bgSizeDark', `data-bg-size-dark="${d.bgSizeDark}"`);
+    res += cEx('fgSizeLight', `data-fg-size-light="${d.fgSizeLight}"`);
+    res += cEx('bgSizeLight', `data-bg-size-light="${d.bgSizeLight}"`);
     res += cEx('fgOpacity', `data-fg-opacity="${d.fgOpacity}"`);
     res += cEx('bgOpacity', `data-bg-opacity="${d.bgOpacity}"`);
     res += cEx('fgBloom', `data-fg-bloom="${d.fgBloom}"`);
@@ -596,14 +650,14 @@ export function initModifierPanel(app: Birkfield) {
     res += cEx('fgActivePoints', `data-fg-active-points="${d.fgActivePoints}"`);
     res += cEx('bgActivePoints', `data-bg-active-points="${d.bgActivePoints}"`);
 
-    if (d.fgColor1) res += `data-fg-color1="#${d.fgColor1.getHexString()}"\n`;
-    if (d.fgColor2) res += `data-fg-color2="#${d.fgColor2.getHexString()}"\n`;
-    if (d.bgColor1) res += `data-bg-color1="#${d.bgColor1.getHexString()}"\n`;
-    if (d.bgColor2) res += `data-bg-color2="#${d.bgColor2.getHexString()}"\n`;
-    if (d.fgColor1Light) res += `data-fg-color1-light="#${d.fgColor1Light.getHexString()}"\n`;
-    if (d.fgColor2Light) res += `data-fg-color2-light="#${d.fgColor2Light.getHexString()}"\n`;
-    if (d.bgColor1Light) res += `data-bg-color1-light="#${d.bgColor1Light.getHexString()}"\n`;
-    if (d.bgColor2Light) res += `data-bg-color2-light="#${d.bgColor2Light.getHexString()}"\n`;
+    if (exportOverrides.has('fgColorDark1') && d.fgColorDark1) res += `data-fg-color-dark1="#${d.fgColorDark1.getHexString()}"\n`;
+    if (exportOverrides.has('fgColorDark2') && d.fgColorDark2) res += `data-fg-color-dark2="#${d.fgColorDark2.getHexString()}"\n`;
+    if (exportOverrides.has('bgColorDark1') && d.bgColorDark1) res += `data-bg-color-dark1="#${d.bgColorDark1.getHexString()}"\n`;
+    if (exportOverrides.has('bgColorDark2') && d.bgColorDark2) res += `data-bg-color-dark2="#${d.bgColorDark2.getHexString()}"\n`;
+    if (exportOverrides.has('fgColorLight1') && d.fgColorLight1) res += `data-fg-color-light1="#${d.fgColorLight1.getHexString()}"\n`;
+    if (exportOverrides.has('fgColorLight2') && d.fgColorLight2) res += `data-fg-color-light2="#${d.fgColorLight2.getHexString()}"\n`;
+    if (exportOverrides.has('bgColorLight1') && d.bgColorLight1) res += `data-bg-color-light1="#${d.bgColorLight1.getHexString()}"\n`;
+    if (exportOverrides.has('bgColorLight2') && d.bgColorLight2) res += `data-bg-color-light2="#${d.bgColorLight2.getHexString()}"\n`;
 
     const getAnchorStr = (v: any) => v === 'auto' ? 'auto' : `${Number(v.x).toFixed(2)},${Number(v.y).toFixed(2)},${Number(v.z).toFixed(2)}`;
     
@@ -639,7 +693,7 @@ export function initModifierPanel(app: Birkfield) {
     const cEx = (prop: string, str: string) => exportOverrides.has(prop) ? str + '\n' : '';
 
     return `{
-${cEx('foregroundShape', `  fgShape: '${d.foregroundShape}',`)}${cEx('backgroundShape', `  bgShape: '${d.backgroundShape}',`)}${cEx('fgSize', `  fgSize: ${d.fgSize},`)}${cEx('bgSize', `  bgSize: ${d.bgSize},`)}${cEx('fgOpacity', `  fgOpacity: ${d.fgOpacity},`)}${cEx('bgOpacity', `  bgOpacity: ${d.bgOpacity},`)}${cEx('fgBloom', `  fgBloom: ${d.fgBloom},`)}${cEx('bgBloom', `  bgBloom: ${d.bgBloom},`)}${cEx('fgJitter', `  fgJitter: ${d.fgJitter},`)}${cEx('bgJitter', `  bgJitter: ${d.bgJitter},`)}${cEx('fgActivePoints', `  fgActivePoints: ${d.fgActivePoints},`)}${cEx('bgActivePoints', `  bgActivePoints: ${d.bgActivePoints},`)}${d.fgColor1 ? `  fgColor1: '#${d.fgColor1.getHexString()}',\n` : ''}${d.fgColor2 ? `  fgColor2: '#${d.fgColor2.getHexString()}',\n` : ''}${d.bgColor1 ? `  bgColor1: '#${d.bgColor1.getHexString()}',\n` : ''}${d.bgColor2 ? `  bgColor2: '#${d.bgColor2.getHexString()}',\n` : ''}${d.fgColor1Light ? `  fgColor1Light: '#${d.fgColor1Light.getHexString()}',\n` : ''}${d.fgColor2Light ? `  fgColor2Light: '#${d.fgColor2Light.getHexString()}',\n` : ''}${d.bgColor1Light ? `  bgColor1Light: '#${d.bgColor1Light.getHexString()}',\n` : ''}${d.bgColor2Light ? `  bgColor2Light: '#${d.bgColor2Light.getHexString()}',\n` : ''}${cEx('foregroundAnchorOffset', `  fgAnchor: ${getAnchorStr(d.foregroundAnchorOffset)},`)}${cEx('backgroundAnchorOffset', `  bgAnchor: ${getAnchorStr(d.backgroundAnchorOffset)},`)}${cEx('foregroundScale', `  fgScale: ${getAnchorStr(d.foregroundScale)},`)}${cEx('backgroundScale', `  bgScale: ${getAnchorStr(d.backgroundScale)},`)}${cEx('foregroundRotation', `  fgRotation: ${getAnchorStr(d.foregroundRotation)},`)}${cEx('backgroundRotation', `  bgRotation: ${getAnchorStr(d.backgroundRotation)},`)}${cEx('fgTransitionSpeed', `  fgTransitionSpeed: ${d.fgTransitionSpeed},`)}${cEx('bgTransitionSpeed', `  bgTransitionSpeed: ${d.bgTransitionSpeed},`)}${cEx('fgRotationSpeed', `  fgRotationSpeed: ${d.fgRotationSpeed},`)}${cEx('bgRotationSpeed', `  bgRotationSpeed: ${d.bgRotationSpeed},`)}${cEx('fgSpinSpeed', `  fgSpinSpeed: ${d.fgSpinSpeed},`)}${cEx('bgSpinSpeed', `  bgSpinSpeed: ${d.bgSpinSpeed},`)}${cEx('fgWarpSpeed', `  fgWarpSpeed: ${d.fgWarpSpeed},`)}${cEx('bgWarpSpeed', `  bgWarpSpeed: ${d.bgWarpSpeed},`)}${cEx('fgMouseMax', `  fgMouseMax: '${d.fgMouseMax ? d.fgMouseMax.x + ',' + d.fgMouseMax.y : '15,15'}',`)}${cEx('bgMouseMax', `  bgMouseMax: '${d.bgMouseMax ? d.bgMouseMax.x + ',' + d.bgMouseMax.y : '15,15'}',`)}${cEx('fgMouse', `  fgMouse: ${d.fgMouse},`)}${cEx('bgMouse', `  bgMouse: ${d.bgMouse},`)}${cEx('fgLoose', `  fgLoose: ${d.fgLoose},`)}${cEx('bgLoose', `  bgLoose: ${d.bgLoose},`)}
+${cEx('themeMode', `  themeMode: '${d.themeMode}',`)}${cEx('foregroundShape', `  fgShape: '${d.foregroundShape}',`)}${cEx('backgroundShape', `  bgShape: '${d.backgroundShape}',`)}${cEx('fgSizeDark', `  fgSizeDark: ${d.fgSizeDark},`)}${cEx('bgSizeDark', `  bgSizeDark: ${d.bgSizeDark},`)}${cEx('fgSizeLight', `  fgSizeLight: ${d.fgSizeLight},`)}${cEx('bgSizeLight', `  bgSizeLight: ${d.bgSizeLight},`)}${cEx('fgOpacity', `  fgOpacity: ${d.fgOpacity},`)}${cEx('bgOpacity', `  bgOpacity: ${d.bgOpacity},`)}${cEx('fgBloom', `  fgBloom: ${d.fgBloom},`)}${cEx('bgBloom', `  bgBloom: ${d.bgBloom},`)}${cEx('fgJitter', `  fgJitter: ${d.fgJitter},`)}${cEx('bgJitter', `  bgJitter: ${d.bgJitter},`)}${cEx('fgActivePoints', `  fgActivePoints: ${d.fgActivePoints},`)}${cEx('bgActivePoints', `  bgActivePoints: ${d.bgActivePoints},`)}${exportOverrides.has('fgColorDark1') && d.fgColorDark1 ? `  fgColorDark1: '#${d.fgColorDark1.getHexString()}',\n` : ''}${exportOverrides.has('fgColorDark2') && d.fgColorDark2 ? `  fgColorDark2: '#${d.fgColorDark2.getHexString()}',\n` : ''}${exportOverrides.has('bgColorDark1') && d.bgColorDark1 ? `  bgColorDark1: '#${d.bgColorDark1.getHexString()}',\n` : ''}${exportOverrides.has('bgColorDark2') && d.bgColorDark2 ? `  bgColorDark2: '#${d.bgColorDark2.getHexString()}',\n` : ''}${exportOverrides.has('fgColorLight1') && d.fgColorLight1 ? `  fgColorLight1: '#${d.fgColorLight1.getHexString()}',\n` : ''}${exportOverrides.has('fgColorLight2') && d.fgColorLight2 ? `  fgColorLight2: '#${d.fgColorLight2.getHexString()}',\n` : ''}${exportOverrides.has('bgColorLight1') && d.bgColorLight1 ? `  bgColorLight1: '#${d.bgColorLight1.getHexString()}',\n` : ''}${exportOverrides.has('bgColorLight2') && d.bgColorLight2 ? `  bgColorLight2: '#${d.bgColorLight2.getHexString()}',\n` : ''}${cEx('foregroundAnchorOffset', `  fgAnchor: ${getAnchorStr(d.foregroundAnchorOffset)},`)}${cEx('backgroundAnchorOffset', `  bgAnchor: ${getAnchorStr(d.backgroundAnchorOffset)},`)}${cEx('foregroundScale', `  fgScale: ${getAnchorStr(d.foregroundScale)},`)}${cEx('backgroundScale', `  bgScale: ${getAnchorStr(d.backgroundScale)},`)}${cEx('foregroundRotation', `  fgRotation: ${getAnchorStr(d.foregroundRotation)},`)}${cEx('backgroundRotation', `  bgRotation: ${getAnchorStr(d.backgroundRotation)},`)}${cEx('fgTransitionSpeed', `  fgTransitionSpeed: ${d.fgTransitionSpeed},`)}${cEx('bgTransitionSpeed', `  bgTransitionSpeed: ${d.bgTransitionSpeed},`)}${cEx('fgRotationSpeed', `  fgRotationSpeed: ${d.fgRotationSpeed},`)}${cEx('bgRotationSpeed', `  bgRotationSpeed: ${d.bgRotationSpeed},`)}${cEx('fgSpinSpeed', `  fgSpinSpeed: ${d.fgSpinSpeed},`)}${cEx('bgSpinSpeed', `  bgSpinSpeed: ${d.bgSpinSpeed},`)}${cEx('fgWarpSpeed', `  fgWarpSpeed: ${d.fgWarpSpeed},`)}${cEx('bgWarpSpeed', `  bgWarpSpeed: ${d.bgWarpSpeed},`)}${cEx('fgMouseMax', `  fgMouseMax: '${d.fgMouseMax ? d.fgMouseMax.x + ',' + d.fgMouseMax.y : '15,15'}',`)}${cEx('bgMouseMax', `  bgMouseMax: '${d.bgMouseMax ? d.bgMouseMax.x + ',' + d.bgMouseMax.y : '15,15'}',`)}${cEx('fgMouse', `  fgMouse: ${d.fgMouse},`)}${cEx('bgMouse', `  bgMouse: ${d.bgMouse},`)}${cEx('fgLoose', `  fgLoose: ${d.fgLoose},`)}${cEx('bgLoose', `  bgLoose: ${d.bgLoose},`)}
   // End of exported overrides
 }`.replace(/\n\s*\n/g, '\n').replace(/,\n  \/\//, '\n  //');
   }
@@ -649,10 +703,13 @@ ${cEx('foregroundShape', `  fgShape: '${d.foregroundShape}',`)}${cEx('background
     const obj: any = {};
     const getAnchorStr = (v: any) => v === 'auto' ? 'auto' : `${Number(v.x).toFixed(2)},${Number(v.y).toFixed(2)},${Number(v.z).toFixed(2)}`;
 
+    if (exportOverrides.has('themeMode')) obj.themeMode = d.themeMode;
     if (exportOverrides.has('foregroundShape')) obj.fgShape = d.foregroundShape;
     if (exportOverrides.has('backgroundShape')) obj.bgShape = d.backgroundShape;
-    if (exportOverrides.has('fgSize')) obj.fgSize = d.fgSize;
-    if (exportOverrides.has('bgSize')) obj.bgSize = d.bgSize;
+    if (exportOverrides.has('fgSizeDark')) obj.fgSizeDark = d.fgSizeDark;
+    if (exportOverrides.has('bgSizeDark')) obj.bgSizeDark = d.bgSizeDark;
+    if (exportOverrides.has('fgSizeLight')) obj.fgSizeLight = d.fgSizeLight;
+    if (exportOverrides.has('bgSizeLight')) obj.bgSizeLight = d.bgSizeLight;
     if (exportOverrides.has('fgOpacity')) obj.fgOpacity = d.fgOpacity;
     if (exportOverrides.has('bgOpacity')) obj.bgOpacity = d.bgOpacity;
     if (exportOverrides.has('fgBloom')) obj.fgBloom = d.fgBloom;
@@ -662,14 +719,14 @@ ${cEx('foregroundShape', `  fgShape: '${d.foregroundShape}',`)}${cEx('background
     if (exportOverrides.has('fgActivePoints')) obj.fgActivePoints = d.fgActivePoints;
     if (exportOverrides.has('bgActivePoints')) obj.bgActivePoints = d.bgActivePoints;
     
-    if (d.fgColor1) obj.fgColor1 = '#' + d.fgColor1.getHexString();
-    if (d.fgColor2) obj.fgColor2 = '#' + d.fgColor2.getHexString();
-    if (d.bgColor1) obj.bgColor1 = '#' + d.bgColor1.getHexString();
-    if (d.bgColor2) obj.bgColor2 = '#' + d.bgColor2.getHexString();
-    if (d.fgColor1Light) obj.fgColor1Light = '#' + d.fgColor1Light.getHexString();
-    if (d.fgColor2Light) obj.fgColor2Light = '#' + d.fgColor2Light.getHexString();
-    if (d.bgColor1Light) obj.bgColor1Light = '#' + d.bgColor1Light.getHexString();
-    if (d.bgColor2Light) obj.bgColor2Light = '#' + d.bgColor2Light.getHexString();
+    if (exportOverrides.has('fgColorDark1') && d.fgColorDark1) obj.fgColorDark1 = '#' + d.fgColorDark1.getHexString();
+    if (exportOverrides.has('fgColorDark2') && d.fgColorDark2) obj.fgColorDark2 = '#' + d.fgColorDark2.getHexString();
+    if (exportOverrides.has('bgColorDark1') && d.bgColorDark1) obj.bgColorDark1 = '#' + d.bgColorDark1.getHexString();
+    if (exportOverrides.has('bgColorDark2') && d.bgColorDark2) obj.bgColorDark2 = '#' + d.bgColorDark2.getHexString();
+    if (exportOverrides.has('fgColorLight1') && d.fgColorLight1) obj.fgColorLight1 = '#' + d.fgColorLight1.getHexString();
+    if (exportOverrides.has('fgColorLight2') && d.fgColorLight2) obj.fgColorLight2 = '#' + d.fgColorLight2.getHexString();
+    if (exportOverrides.has('bgColorLight1') && d.bgColorLight1) obj.bgColorLight1 = '#' + d.bgColorLight1.getHexString();
+    if (exportOverrides.has('bgColorLight2') && d.bgColorLight2) obj.bgColorLight2 = '#' + d.bgColorLight2.getHexString();
 
     if (exportOverrides.has('foregroundAnchorOffset')) obj.fgAnchor = getAnchorStr(d.foregroundAnchorOffset);
     if (exportOverrides.has('backgroundAnchorOffset')) obj.bgAnchor = getAnchorStr(d.backgroundAnchorOffset);

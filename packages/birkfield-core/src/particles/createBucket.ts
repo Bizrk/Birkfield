@@ -12,10 +12,21 @@ export function createBucket(count: number, pointSize: number = 0.4, opacity: nu
   gradient.addColorStop(0, 'rgba(255,255,255,1)');
   gradient.addColorStop(0.15, 'rgba(255,255,255,0.9)');
   gradient.addColorStop(0.4, 'rgba(255,255,255,0.1)'); // Sharper falloff reduces muddy blending
-  gradient.addColorStop(1, 'rgba(0,0,0,0)');
+  gradient.addColorStop(1, 'rgba(255,255,255,0)');
   context.fillStyle = gradient;
   context.fillRect(0, 0, 64, 64);
   const texture = new THREE.CanvasTexture(canvas);
+
+  // Create a solid circular texture for light mode
+  const canvasSolid = document.createElement('canvas');
+  canvasSolid.width = 64;
+  canvasSolid.height = 64;
+  const contextSolid = canvasSolid.getContext('2d')!;
+  contextSolid.beginPath();
+  contextSolid.arc(32, 32, 28, 0, Math.PI * 2);
+  contextSolid.fillStyle = 'rgba(255,255,255,1)';
+  contextSolid.fill();
+  const textureSolid = new THREE.CanvasTexture(canvasSolid);
 
   const positions = new Float32Array(count * 3);
   const colors = new Float32Array(count * 3);
@@ -70,12 +81,14 @@ export function createBucket(count: number, pointSize: number = 0.4, opacity: nu
     scale: new THREE.Vector3(1, 1, 1),
     rotation: new THREE.Euler(),
     baseRotation: new THREE.Euler(),
-    transitionProgress: 0.05 // default ease rate
+    transitionProgress: 0.05, // default ease rate
+    textureBloom: texture,
+    textureSolid
   };
 }
 
 // Helper to fill target arrays from sampled point setup
-export function setBucketTarget(bucket: BucketState, targetPoints: SampledPoint[], color1?: THREE.Color, color2?: THREE.Color, activePoints?: number) {
+export function setBucketTarget(bucket: BucketState, targetPoints: SampledPoint[], color1?: THREE.Color, color2?: THREE.Color, activePoints?: number, theme?: string) {
   if (targetPoints.length !== bucket.count) {
     console.warn(`Target point count (${targetPoints.length}) mismatch with bucket (${bucket.count}).`);
   }
@@ -92,8 +105,8 @@ export function setBucketTarget(bucket: BucketState, targetPoints: SampledPoint[
     const isOutOfBounds = i >= activeLimit;
 
     if (isOutOfBounds || (p.color && p.color.r === 0 && p.color.g === 0 && p.color.b === 0)) {
-      // Points outside the active count get faded to completely black (invisible in AdditiveBlending)
-      c = new THREE.Color(0, 0, 0);
+      // Points outside the active count get faded to backgound color to disappear
+      c = theme === 'light' ? new THREE.Color(1, 1, 1) : new THREE.Color(0, 0, 0);
       // Fling them deep into background space so they sit behind geometry
       bucket.targetLocalPositions[i * 3 + 2] -= 2000.0; 
     } else if (color1 && color2) {

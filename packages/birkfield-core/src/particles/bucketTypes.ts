@@ -25,4 +25,7 @@ export interface BucketState {
   
   // Point count
   count: number;
+  
+  textureBloom: THREE.Texture;
+  textureSolid: THREE.Texture;
 }

@@ -19,18 +19,20 @@ export interface BirkfieldOptions {
 export interface ConfigPreset {
   fgShape?: string;
   bgShape?: string;
-  fgSize?: number;
-  bgSize?: number;
+  fgSizeDark?: number;
+  bgSizeDark?: number;
+  fgSizeLight?: number;
+  bgSizeLight?: number;
   fgOpacity?: number;
   bgOpacity?: number;
   fgBloom?: number;
   bgBloom?: number;
   fgJitter?: number;
   bgJitter?: number;
-  fgColor1?: string;
-  fgColor2?: string;
-  bgColor1?: string;
-  bgColor2?: string;
+  fgColorDark1?: string;
+  fgColorDark2?: string;
+  bgColorDark1?: string;
+  bgColorDark2?: string;
   fgAnchor?: string;
   bgAnchor?: string;
   zIndex?: string;
@@ -48,38 +50,41 @@ export interface ConfigPreset {
   bgRotationSpeed?: number;
   fgSpinSpeed?: number;
   bgSpinSpeed?: number;
-  fgColor1Light?: string;
-  fgColor2Light?: string;
-  bgColor1Light?: string;
-  bgColor2Light?: string;
+  fgColorLight1?: string;
+  fgColorLight2?: string;
+  bgColorLight1?: string;
+  bgColorLight2?: string;
   fgActivePoints?: number;
   bgActivePoints?: number;
   fgWarpSpeed?: number;
   bgWarpSpeed?: number;
   fgMouseMax?: string;
   bgMouseMax?: string;
+  themeMode?: 'auto' | 'inverted' | 'light' | 'dark';
 }
 
 export interface SectionDef {
   id: string;
   foregroundShape: string;
   backgroundShape: string;
-  fgSize: number;
-  bgSize: number;
+  fgSizeDark: number;
+  bgSizeDark: number;
+  fgSizeLight: number;
+  bgSizeLight: number;
   fgOpacity: number;
   bgOpacity: number;
   fgBloom: number;
   bgBloom: number;
   fgJitter: number;
   bgJitter: number;
-  fgColor1?: THREE.Color;
-  fgColor2?: THREE.Color;
-  bgColor1?: THREE.Color;
-  bgColor2?: THREE.Color;
-  fgColor1Light?: THREE.Color;
-  fgColor2Light?: THREE.Color;
-  bgColor1Light?: THREE.Color;
-  bgColor2Light?: THREE.Color;
+  fgColorDark1?: THREE.Color;
+  fgColorDark2?: THREE.Color;
+  bgColorDark1?: THREE.Color;
+  bgColorDark2?: THREE.Color;
+  fgColorLight1?: THREE.Color;
+  fgColorLight2?: THREE.Color;
+  bgColorLight1?: THREE.Color;
+  bgColorLight2?: THREE.Color;
   foregroundAnchorOffset: THREE.Vector3 | 'auto';
   backgroundAnchorOffset: THREE.Vector3 | 'auto';
   foregroundScale: THREE.Vector3;
@@ -105,6 +110,7 @@ export interface SectionDef {
   bgSpinSpeed: number;
   fgMouseMax: THREE.Vector2;
   bgMouseMax: THREE.Vector2;
+  themeMode: 'auto' | 'inverted' | 'light' | 'dark';
 }
 
 export class Birkfield {
@@ -127,6 +133,7 @@ export class Birkfield {
   private lastFrameScroll = 0;
   
   public theme: 'dark' | 'light' = 'dark';
+  private currentEffectiveTheme: 'dark' | 'light' | '' = '';
 
   constructor(options: BirkfieldOptions) {
     this.options = {
@@ -159,7 +166,7 @@ export class Birkfield {
 
     // Initial theme detection
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-       this.theme = 'light';
+       this.setTheme('light');
     }
 
     // 4. Initialize DOM mapping
@@ -312,22 +319,24 @@ export class Birkfield {
         id: el.id,
         foregroundShape: getStr('fgShape', 'fgShape', Object.keys(this.options.objects)[0])!,
         backgroundShape: getStr('bgShape', 'bgShape', Object.keys(this.options.objects)[0])!,
-        fgSize: getNum('fgSize', 'fgSize', 0.8),
-        bgSize: getNum('bgSize', 'bgSize', 0.15),
+        fgSizeDark: getNum('fgSizeDark', 'fgSizeDark', 0.8),
+        bgSizeDark: getNum('bgSizeDark', 'bgSizeDark', 0.15),
+        fgSizeLight: getNum('fgSizeLight', 'fgSizeLight', getNum('fgSizeDark', 'fgSizeDark', 0.8) * 0.35),
+        bgSizeLight: getNum('bgSizeLight', 'bgSizeLight', getNum('bgSizeDark', 'bgSizeDark', 0.15) * 0.35),
         fgOpacity: getNum('fgOpacity', 'fgOpacity', 1.0),
         bgOpacity: getNum('bgOpacity', 'bgOpacity', 1.0),
         fgBloom: getNum('fgBloom', 'fgBloom', 1.5),
         bgBloom: getNum('bgBloom', 'bgBloom', 0.1),
         fgJitter: getNum('fgJitter', 'fgJitter', 0.05),
         bgJitter: getNum('bgJitter', 'bgJitter', 0.05),
-        fgColor1: getColor('fgColor1', 'fgColor1'),
-        fgColor2: getColor('fgColor2', 'fgColor2'),
-        bgColor1: getColor('bgColor1', 'bgColor1'),
-        bgColor2: getColor('bgColor2', 'bgColor2'),
-        fgColor1Light: getColor('fgColor1Light', 'fgColor1Light'),
-        fgColor2Light: getColor('fgColor2Light', 'fgColor2Light'),
-        bgColor1Light: getColor('bgColor1Light', 'bgColor1Light'),
-        bgColor2Light: getColor('bgColor2Light', 'bgColor2Light'),
+        fgColorDark1: getColor('fgColorDark1', 'fgColorDark1'),
+        fgColorDark2: getColor('fgColorDark2', 'fgColorDark2'),
+        bgColorDark1: getColor('bgColorDark1', 'bgColorDark1'),
+        bgColorDark2: getColor('bgColorDark2', 'bgColorDark2'),
+        fgColorLight1: getColor('fgColorLight1', 'fgColorLight1'),
+        fgColorLight2: getColor('fgColorLight2', 'fgColorLight2'),
+        bgColorLight1: getColor('bgColorLight1', 'bgColorLight1'),
+        bgColorLight2: getColor('bgColorLight2', 'bgColorLight2'),
         foregroundAnchorOffset: getAnchor('fgAnchor', 'fgAnchor', new THREE.Vector3(3, 0, 0)),
         backgroundAnchorOffset: getAnchor('bgAnchor', 'bgAnchor', new THREE.Vector3(-3, 0, -5)),
         foregroundScale: getAnchor('fgScale', 'fgScale', new THREE.Vector3(1, 1, 1)) as THREE.Vector3,
@@ -352,7 +361,8 @@ export class Birkfield {
         fgWarpSpeed: getNum('fgWarpSpeed', 'fgWarpSpeed', 5.0),
         bgWarpSpeed: getNum('bgWarpSpeed', 'bgWarpSpeed', 5.0),
         fgMouseMax: this.parseVector2(getStr('fgMouseMax', 'fgMouseMax', undefined), new THREE.Vector2(15, 15)),
-        bgMouseMax: this.parseVector2(getStr('bgMouseMax', 'bgMouseMax', undefined), new THREE.Vector2(15, 15))
+        bgMouseMax: this.parseVector2(getStr('bgMouseMax', 'bgMouseMax', undefined), new THREE.Vector2(15, 15)),
+        themeMode: getStr('themeMode', 'themeMode', 'auto') as 'auto' | 'inverted' | 'light' | 'dark'
       });
       toggleA = !toggleA;
     });
@@ -418,15 +428,20 @@ export class Birkfield {
 
   public setTheme(mode: 'dark' | 'light') {
     this.theme = mode;
-    this.activeSectionId = ''; // trick animate loop into recompiling the array colors seamlessly
+    if (this.scene.fog && (this.scene.fog as THREE.FogExp2).color) {
+      (this.scene.fog as THREE.FogExp2).color = new THREE.Color(mode === 'light' ? '#f0f0f0' : '#0d0f12');
+    }
   }
 
-  private resolveColor(section: SectionDef, layer: 'fg' | 'bg', index: 1 | 2): THREE.Color | undefined {
-    if (this.theme === 'light') {
-        const lightColor = section[`${layer}Color${index}Light` as keyof SectionDef];
+  private resolveColor(section: SectionDef, layer: 'fg' | 'bg', index: 1 | 2, effectiveTheme: string): THREE.Color | undefined {
+    if (effectiveTheme === 'light') {
+        const lightColor = section[`${layer}ColorLight${index}` as keyof SectionDef];
         if (lightColor) return lightColor as THREE.Color;
+    } else if (effectiveTheme === 'dark') {
+        const darkColor = section[`${layer}ColorDark${index}` as keyof SectionDef];
+        if (darkColor) return darkColor as THREE.Color;
     }
-    return section[`${layer}Color${index}` as keyof SectionDef] as THREE.Color | undefined;
+    return undefined;
   }
 
   private animate() {
@@ -439,6 +454,32 @@ export class Birkfield {
     const activeSection = this.computeCurrentSection();
     if (!activeSection) return;
 
+    let effectiveTheme = this.theme;
+    if (activeSection.themeMode === 'light') effectiveTheme = 'light';
+    else if (activeSection.themeMode === 'dark') effectiveTheme = 'dark';
+    else if (activeSection.themeMode === 'inverted') effectiveTheme = this.theme === 'light' ? 'dark' : 'light';
+
+    if (effectiveTheme !== this.currentEffectiveTheme) {
+        this.currentEffectiveTheme = effectiveTheme;
+        
+        const blendMode = effectiveTheme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending;
+        if (this.sys?.bucketA?.points?.material) {
+            const matA = this.sys.bucketA.points.material as THREE.PointsMaterial;
+            matA.blending = blendMode;
+            matA.map = effectiveTheme === 'light' ? this.sys.bucketA.textureSolid : this.sys.bucketA.textureBloom;
+            matA.needsUpdate = true;
+        }
+        if (this.sys?.bucketB?.points?.material) {
+            const matB = this.sys.bucketB.points.material as THREE.PointsMaterial;
+            matB.blending = blendMode;
+            matB.map = effectiveTheme === 'light' ? this.sys.bucketB.textureSolid : this.sys.bucketB.textureBloom;
+            matB.needsUpdate = true;
+        }
+        
+        // Force the section to re-resolve colors instantly!
+        this.activeSectionId = ''; 
+    }
+
     if (activeSection.id !== this.activeSectionId) {
       this.activeSectionId = activeSection.id;
       
@@ -448,17 +489,17 @@ export class Birkfield {
       const fgShape = fgShapeData ? (activeSection.fgLoose ? fgShapeData.loose : fgShapeData.resolved) : Object.values(this.targetCache)[0].resolved;
       const bgShape = bgShapeData ? (activeSection.bgLoose ? bgShapeData.loose : bgShapeData.resolved) : Object.values(this.targetCache)[0].loose;
       
-      const fgC1 = this.resolveColor(activeSection, 'fg', 1);
-      const fgC2 = this.resolveColor(activeSection, 'fg', 2);
-      const bgC1 = this.resolveColor(activeSection, 'bg', 1);
-      const bgC2 = this.resolveColor(activeSection, 'bg', 2);
+      const fgC1 = this.resolveColor(activeSection, 'fg', 1, effectiveTheme);
+      const fgC2 = this.resolveColor(activeSection, 'fg', 2, effectiveTheme);
+      const bgC1 = this.resolveColor(activeSection, 'bg', 1, effectiveTheme);
+      const bgC2 = this.resolveColor(activeSection, 'bg', 2, effectiveTheme);
 
       if (activeSection.foregroundBucket === 'A') {
-        setBucketTarget(this.sys.bucketA, fgShape, fgC1, fgC2, activeSection.fgActivePoints);
-        setBucketTarget(this.sys.bucketB, bgShape, bgC1, bgC2, activeSection.bgActivePoints);
+        setBucketTarget(this.sys.bucketA, fgShape, fgC1, fgC2, activeSection.fgActivePoints, effectiveTheme);
+        setBucketTarget(this.sys.bucketB, bgShape, bgC1, bgC2, activeSection.bgActivePoints, effectiveTheme);
       } else {
-        setBucketTarget(this.sys.bucketB, fgShape, fgC1, fgC2, activeSection.fgActivePoints);
-        setBucketTarget(this.sys.bucketA, bgShape, bgC1, bgC2, activeSection.bgActivePoints);
+        setBucketTarget(this.sys.bucketB, fgShape, fgC1, fgC2, activeSection.fgActivePoints, effectiveTheme);
+        setBucketTarget(this.sys.bucketA, bgShape, bgC1, bgC2, activeSection.bgActivePoints, effectiveTheme);
       }
 
       // Hot-swap the canvas HTML zIndex to weave it through the document
@@ -488,7 +529,10 @@ export class Birkfield {
          targetAnchor = offsetConfig as THREE.Vector3;
       }
 
-      const targetPointSize = isForeground ? activeSection.fgSize : activeSection.bgSize;
+      const targetPointSize = isForeground 
+          ? (effectiveTheme === 'light' ? activeSection.fgSizeLight : activeSection.fgSizeDark) 
+          : (effectiveTheme === 'light' ? activeSection.bgSizeLight : activeSection.bgSizeDark);
+      
       const targetOpacity = isForeground ? activeSection.fgOpacity : activeSection.bgOpacity;
       if (bucket.points.material) {
           bucket.points.material.size += (targetPointSize - bucket.points.material.size) * dt * 3;
@@ -553,6 +597,10 @@ export class Birkfield {
     const bloomA = bucketAIsForeground ? activeSection.fgBloom : activeSection.bgBloom;
     const bloomB = !bucketAIsForeground ? activeSection.fgBloom : activeSection.bgBloom;
 
+    // Prevent aggressive multiplicative bloom washing out colors on white backgrounds
+    const safeBloomA = effectiveTheme === 'light' ? Math.min(bloomA, 1.0) : bloomA;
+    const safeBloomB = effectiveTheme === 'light' ? Math.min(bloomB, 1.0) : bloomB;
+
     const jitterA = bucketAIsForeground ? activeSection.fgJitter : activeSection.bgJitter;
     const jitterB = !bucketAIsForeground ? activeSection.fgJitter : activeSection.bgJitter;
 
@@ -577,8 +625,8 @@ export class Birkfield {
     const warpA = bucketAIsForeground ? activeSection.fgWarpSpeed : activeSection.bgWarpSpeed;
     const warpB = !bucketAIsForeground ? activeSection.fgWarpSpeed : activeSection.bgWarpSpeed;
 
-    updateBucket(this.sys.bucketA, dt, bloomA, time, jitterA, fgTransSpeed, getDisruption(this.sys.bucketA), warpA);
-    updateBucket(this.sys.bucketB, dt, bloomB, time, jitterB, bgTransSpeed, getDisruption(this.sys.bucketB), warpB);
+    updateBucket(this.sys.bucketA, dt, safeBloomA, time, jitterA, fgTransSpeed, getDisruption(this.sys.bucketA), warpA);
+    updateBucket(this.sys.bucketB, dt, safeBloomB, time, jitterB, bgTransSpeed, getDisruption(this.sys.bucketB), warpB);
 
     this.renderer.render(this.scene, this.camera);
   }
