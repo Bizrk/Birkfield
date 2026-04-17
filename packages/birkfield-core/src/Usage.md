@@ -49,16 +49,22 @@ The engine automatically queries `window.matchMedia('(prefers-color-scheme: ligh
 ### **The Alignment Anchors & Rotations**
 You can define exact baseline geometric rotations via `data-fg-rotation` and `data-bg-rotation` using a raw Euler radiun string e.g. `0,3.14,0`. These are great for permanently facing objects slightly off axis.
 
-You place objects physically on the 3D stage using the `data-fg-anchor` and `data-bg-anchor` attributes in an `X,Y,Z` string. (e.g. `data-fg-anchor="3,0,-5"`).
-* **X**: Horizontal (Negative=Left, Positive=Right)
-* **Y**: Vertical 
-* **Z**: Depth (Negative pushes an object deep behind the screen, creating heavy mouse parallaxing)
+You place objects physically on the scoped DOM by declaring modifiers via the `data-fg-anchor` and `data-bg-anchor` attributes in an `X,Y,Z` string. (e.g. `data-fg-anchor="3,0,-5"`).
+* **X**: Horizontal modifier relative to targeted boundary (Negative=Left, Positive=Right)
+* **Y**: Vertical modifier 
+* **Z**: Depth modifier (Negative pushes an object deep behind the screen, creating heavy mouse parallaxing)
 
 **Scales:**
-You can specifically warp or multiply geometry locally via `data-fg-scale` (defaults to `1,1,1`). This stretches underlying geometries mathematically without affecting raw point structures mapping to them natively.
+You can specifically warp or multiply geometry locally via `data-fg-scale` (defaults to `1,1,1`). This mathematically multiplies the underlying DOM-bounding scale projection.
 
-**The `auto` Keyword:**
-If you set the anchor to `"auto"`, the engine runs an inverse-camera projection on the specific HTML DOM Element bounding-box containing the attribute. It mathematically measures the element on the 2D window space and accurately translates the 3D mesh directly inside of the 2D bounds.
+***
+
+### **Native DOM Tracking Targets**
+Because the engine now natively tracks DOM bounding-boxes on scroll, you can explicitly direct the tracking layout internally by nesting structurally specific divs using these reserved class-names:
+* **`.birkfield-fg`**: Maps the precise foreground 3D anchor projection to surround this specific DOM node bounds instead of the entire section constraint.
+* **`.birkfield-bg`**: Maps the background projection exactly over this internal DOM node constraint.
+
+This essentially lets you run fluid, highly targeted responsive CSS using flex/grid on standard HTML elements without fighting math inside of scripts! Any `<div class="birkfield-fg">` explicitly handles where your particle cluster lands!
 
 ---
 
@@ -66,10 +72,10 @@ If you set the anchor to `"auto"`, the engine runs an inverse-camera projection 
 
 You use CSS class-names to dictate how the sections trigger:
 
-* **`.birkfield-section`**: Represents a massive, full-screen vertical scrolling layout block. The active component tracks your Scroll Y bounds relative to the block's physical center offset and hot-swaps seamlessly when you cross thresholds.
-* **`.birkfield-target`**: Represent strict, localized inline boxes. Used exclusively alongside the `auto` anchor system to box meshes exactly into paragraphs or columns flawlessly.
+* **`.birkfield-section`**: Represents a massive, relative scrolling layout block. The active component tracks your Scroll Y bounds relative to the block's physical center offset and hot-swaps seamlessly when you cross thresholds.
+* **`.birkfield-target`**: Represents strict, localized inline boxes. 
 
-*(Tip: You can use an inner `<div class="anchor-region" data-anchor="name">` tag block to specify a localized custom anchor node without overriding the primary full-width scroll region itself)*
+*(Tip: To place objects selectively inside a section or target seamlessly, ensure you nest lightweight `.birkfield-fg` and `.birkfield-bg` nodes into the flow of the document!)*
 
 ---
 

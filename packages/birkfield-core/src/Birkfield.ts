@@ -89,10 +89,10 @@ export interface SectionDef {
   fgColorLight2?: THREE.Color;
   bgColorLight1?: THREE.Color;
   bgColorLight2?: THREE.Color;
-  foregroundAnchorOffset: THREE.Vector3 | 'auto';
-  backgroundAnchorOffset: THREE.Vector3 | 'auto';
-  fgAnchorMobileRaw?: THREE.Vector3 | 'auto';
-  bgAnchorMobileRaw?: THREE.Vector3 | 'auto';
+  foregroundAnchorOffset: THREE.Vector3;
+  backgroundAnchorOffset: THREE.Vector3;
+  fgAnchorMobileRaw?: THREE.Vector3;
+  bgAnchorMobileRaw?: THREE.Vector3;
   foregroundScale: THREE.Vector3;
   backgroundScale: THREE.Vector3;
   fgScaleMobileRaw?: THREE.Vector3;
@@ -100,7 +100,8 @@ export interface SectionDef {
   foregroundRotation: THREE.Euler;
   backgroundRotation: THREE.Euler;
   foregroundBucket: 'A' | 'B';
-  domAnchorElement?: HTMLElement | null;
+  fgAnchorElement?: HTMLElement | null;
+  bgAnchorElement?: HTMLElement | null;
   zIndex?: string; // Controls dynamic background/foreground swapping per section
   fgMouse: boolean;
   bgMouse: boolean;
@@ -135,7 +136,7 @@ export class Birkfield {
   private scrollY: number = 0;
   private viewportHeight: number = window.innerHeight;
   
-  private activeSectionId: string = '';
+  public activeSectionId: string = '';
   private clock = new THREE.Clock();
   private isDestroyed = false;
   private lastFrameScroll = 0;
@@ -186,8 +187,8 @@ export class Birkfield {
     requestAnimationFrame(this.animate);
   }
 
-  private parseAnchor(val: any, fallback: THREE.Vector3 | 'auto'): THREE.Vector3 | 'auto' {
-    if (val === 'auto') return 'auto';
+  private parseAnchor(val: any, fallback: THREE.Vector3 | undefined): THREE.Vector3 | undefined {
+    if (val === 'auto') return new THREE.Vector3(0, 0, 0); // Convert legacy auto to 0 offset
     if (!val) return fallback;
     const parts = String(val).split(',').map(s => parseFloat(s.trim()));
     if (parts.length >= 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
@@ -272,8 +273,13 @@ export class Birkfield {
 
     elements.forEach((el, index) => {
       const ds = (el as HTMLElement).dataset;
+      const isTarget = el.classList.contains('birkfield-target');
       const explicitAnchor = el.querySelector('.anchor-region') as HTMLElement | null;
-      const resolvedAnchorElement = explicitAnchor || (el as HTMLElement);
+      const fgAnchorEl = el.querySelector('.birkfield-fg') as HTMLElement | null;
+      const bgAnchorEl = el.querySelector('.birkfield-bg') as HTMLElement | null;
+      
+      const resolvedFgAnchorElement = fgAnchorEl || explicitAnchor || (isTarget ? el as HTMLElement : null);
+      const resolvedBgAnchorElement = bgAnchorEl || explicitAnchor || (isTarget ? el as HTMLElement : null);
       
       let inlineConfig: Partial<ConfigPreset> = {};
       
@@ -315,7 +321,7 @@ export class Birkfield {
           const val = getStr(dsName, configKey, undefined);
           return val ? new THREE.Color(val) : undefined;
       };
-      const getAnchor = (dsName: string, configKey: keyof ConfigPreset, fallback: THREE.Vector3 | 'auto') => {
+      const getAnchor = (dsName: string, configKey: keyof ConfigPreset, fallback: THREE.Vector3 | undefined) => {
           return this.parseAnchor(getStr(dsName, configKey, undefined), fallback);
       };
 
@@ -355,11 +361,11 @@ export class Birkfield {
         bgScaleMobileRaw: getAnchor('bgScaleMobile', 'bgScaleMobile', undefined as any) as THREE.Vector3 | undefined,
 
         foregroundAnchorOffset: isMobile 
-            ? getAnchor('fgAnchorMobile', 'fgAnchorMobile', getAnchor('fgAnchor', 'fgAnchor', new THREE.Vector3(3, 0, 0)))
-            : getAnchor('fgAnchor', 'fgAnchor', new THREE.Vector3(3, 0, 0)),
+            ? getAnchor('fgAnchorMobile', 'fgAnchorMobile', getAnchor('fgAnchor', 'fgAnchor', resolvedFgAnchorElement ? new THREE.Vector3(0,0,0) : new THREE.Vector3(3, 0, 0))) as THREE.Vector3
+            : getAnchor('fgAnchor', 'fgAnchor', resolvedFgAnchorElement ? new THREE.Vector3(0,0,0) : new THREE.Vector3(3, 0, 0)) as THREE.Vector3,
         backgroundAnchorOffset: isMobile 
-            ? getAnchor('bgAnchorMobile', 'bgAnchorMobile', getAnchor('bgAnchor', 'bgAnchor', new THREE.Vector3(-3, 0, -5)))
-            : getAnchor('bgAnchor', 'bgAnchor', new THREE.Vector3(-3, 0, -5)),
+            ? getAnchor('bgAnchorMobile', 'bgAnchorMobile', getAnchor('bgAnchor', 'bgAnchor', resolvedBgAnchorElement ? new THREE.Vector3(0,0,0) : new THREE.Vector3(-3, 0, -5))) as THREE.Vector3
+            : getAnchor('bgAnchor', 'bgAnchor', resolvedBgAnchorElement ? new THREE.Vector3(0,0,0) : new THREE.Vector3(-3, 0, -5)) as THREE.Vector3,
         foregroundScale: isMobile 
             ? getAnchor('fgScaleMobile', 'fgScaleMobile', getAnchor('fgScale', 'fgScale', new THREE.Vector3(1, 1, 1))) as THREE.Vector3
             : getAnchor('fgScale', 'fgScale', new THREE.Vector3(1, 1, 1)) as THREE.Vector3,
@@ -371,7 +377,8 @@ export class Birkfield {
         foregroundBucket: toggleA ? 'A' : 'B',
         fgLoose: getBool('fgLoose', 'fgLoose', false), // default foregrounds resolve cleanly
         bgLoose: getBool('bgLoose', 'bgLoose', true),  // default backgrounds scatter into clouds
-        domAnchorElement: resolvedAnchorElement,
+        fgAnchorElement: resolvedFgAnchorElement,
+        bgAnchorElement: resolvedBgAnchorElement,
         zIndex: getStr('zIndex', 'zIndex', undefined),
         fgMouse: getBool('fgMouse', 'fgMouse', true),
         bgMouse: getBool('bgMouse', 'bgMouse', true),
@@ -541,17 +548,30 @@ export class Birkfield {
       let targetScale = baseScale;
       let targetBaseRot = isForeground ? activeSection.foregroundRotation : activeSection.backgroundRotation;
       
+      const anchorEl = isForeground ? activeSection.fgAnchorElement : activeSection.bgAnchorElement;
+
       let isTrackingDOM = false;
 
-      if (offsetConfig === 'auto') {
-         // Auto-track the DOM anchor
-         const zDepth = isForeground ? 0 : -5;
-         const domXform = this.getDOMObjectTransform(activeSection.domAnchorElement, zDepth, baseScale);
-         targetAnchor = domXform.anchor;
-         targetScale = domXform.scale;
-         isTrackingDOM = true;
+      if (anchorEl) {
+          // Track DOM object transform as foundation
+          const zDepth = isForeground ? 0 : -5;
+          const domXform = this.getDOMObjectTransform(anchorEl, zDepth, baseScale);
+          
+          if (offsetConfig) {
+              // Add offset to DOM base position
+              targetAnchor = domXform.anchor.clone().add(offsetConfig as THREE.Vector3);
+          } else {
+              targetAnchor = domXform.anchor;
+          }
+          
+          // Multiply scale modifier by DOM base scale
+          targetScale = domXform.scale.clone().multiply(baseScale);
+          isTrackingDOM = true;
       } else {
-         targetAnchor = offsetConfig as THREE.Vector3;
+          // Legacy direct coordinates when not mapped securely to a specific DOM node
+          targetAnchor = offsetConfig as THREE.Vector3;
+          targetScale = baseScale;
+          isTrackingDOM = false;
       }
 
       const targetPointSize = isForeground 
@@ -589,8 +609,10 @@ export class Birkfield {
       let localMouseX = this.mouseX;
       let localMouseY = this.mouseY;
 
-      if (activeSection.domAnchorElement) {
-          const rect = activeSection.domAnchorElement.getBoundingClientRect();
+      const domAnchor = isForeground ? activeSection.fgAnchorElement : activeSection.bgAnchorElement;
+
+      if (domAnchor) {
+          const rect = domAnchor.getBoundingClientRect();
           const domCenterX = rect.left + rect.width / 2;
           const domCenterY = rect.top + rect.height / 2;
           
