@@ -85,7 +85,11 @@ export function initModifierPanel(app: Birkfield) {
     foregroundScale: 'fgScale',
     backgroundScale: 'bgScale',
     foregroundRotation: 'fgRotation',
-    backgroundRotation: 'bgRotation'
+    backgroundRotation: 'bgRotation',
+    fgAnchorMobileRaw: 'fgAnchorMobile',
+    bgAnchorMobileRaw: 'bgAnchorMobile',
+    fgScaleMobileRaw: 'fgScaleMobile',
+    bgScaleMobileRaw: 'bgScaleMobile'
   };
 
   // Render loop to track current section
@@ -111,7 +115,8 @@ export function initModifierPanel(app: Birkfield) {
             'fgRotationSpeed', 'bgRotationSpeed', 'foregroundAnchorOffset', 
             'backgroundAnchorOffset', 'foregroundScale', 'backgroundScale',
             'foregroundRotation', 'backgroundRotation', 'fgMouseMax', 'bgMouseMax',
-            'fgMouse', 'bgMouse', 'fgLoose', 'bgLoose'
+            'fgMouse', 'bgMouse', 'fgLoose', 'bgLoose',
+            'fgAnchorMobileRaw', 'bgAnchorMobileRaw', 'fgScaleMobileRaw', 'bgScaleMobileRaw'
          ];
          allProps.forEach(p => {
              const dsKey = propToDataset[p] || p;
@@ -426,7 +431,9 @@ export function initModifierPanel(app: Birkfield) {
     const vecProps = [
         'foregroundAnchorOffset', 'backgroundAnchorOffset',
         'foregroundScale', 'backgroundScale',
-        'foregroundRotation', 'backgroundRotation'
+        'foregroundRotation', 'backgroundRotation',
+        'fgAnchorMobileRaw', 'bgAnchorMobileRaw', 
+        'fgScaleMobileRaw', 'bgScaleMobileRaw'
     ];
 
     vecProps.forEach(prop => {

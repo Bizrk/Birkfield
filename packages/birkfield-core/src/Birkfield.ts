@@ -35,6 +35,8 @@ export interface ConfigPreset {
   bgColorDark2?: string;
   fgAnchor?: string;
   bgAnchor?: string;
+  fgAnchorMobile?: string;
+  bgAnchorMobile?: string;
   zIndex?: string;
   fgMouse?: boolean;
   bgMouse?: boolean;
@@ -46,6 +48,8 @@ export interface ConfigPreset {
   bgRotation?: string;
   fgScale?: string;
   bgScale?: string;
+  fgScaleMobile?: string;
+  bgScaleMobile?: string;
   fgRotationSpeed?: number;
   bgRotationSpeed?: number;
   fgSpinSpeed?: number;
@@ -87,8 +91,12 @@ export interface SectionDef {
   bgColorLight2?: THREE.Color;
   foregroundAnchorOffset: THREE.Vector3 | 'auto';
   backgroundAnchorOffset: THREE.Vector3 | 'auto';
+  fgAnchorMobileRaw?: THREE.Vector3 | 'auto';
+  bgAnchorMobileRaw?: THREE.Vector3 | 'auto';
   foregroundScale: THREE.Vector3;
   backgroundScale: THREE.Vector3;
+  fgScaleMobileRaw?: THREE.Vector3;
+  bgScaleMobileRaw?: THREE.Vector3;
   foregroundRotation: THREE.Euler;
   backgroundRotation: THREE.Euler;
   foregroundBucket: 'A' | 'B';
@@ -315,6 +323,8 @@ export class Birkfield {
           return this.parseEuler(getStr(dsName, configKey, undefined), fallback);
       };
 
+      const isMobile = window.innerWidth <= 768;
+
       this.sections.push({
         id: el.id,
         foregroundShape: getStr('fgShape', 'fgShape', Object.keys(this.options.objects)[0])!,
@@ -337,10 +347,25 @@ export class Birkfield {
         fgColorLight2: getColor('fgColorLight2', 'fgColorLight2'),
         bgColorLight1: getColor('bgColorLight1', 'bgColorLight1'),
         bgColorLight2: getColor('bgColorLight2', 'bgColorLight2'),
-        foregroundAnchorOffset: getAnchor('fgAnchor', 'fgAnchor', new THREE.Vector3(3, 0, 0)),
-        backgroundAnchorOffset: getAnchor('bgAnchor', 'bgAnchor', new THREE.Vector3(-3, 0, -5)),
-        foregroundScale: getAnchor('fgScale', 'fgScale', new THREE.Vector3(1, 1, 1)) as THREE.Vector3,
-        backgroundScale: getAnchor('bgScale', 'bgScale', new THREE.Vector3(0.5, 0.5, 0.5)) as THREE.Vector3,
+        // Allow dedicated innerWidth checks specifically designed to natively decouple mobile DOM layout logic
+        
+        fgAnchorMobileRaw: getAnchor('fgAnchorMobile', 'fgAnchorMobile', undefined as any),
+        bgAnchorMobileRaw: getAnchor('bgAnchorMobile', 'bgAnchorMobile', undefined as any),
+        fgScaleMobileRaw: getAnchor('fgScaleMobile', 'fgScaleMobile', undefined as any) as THREE.Vector3 | undefined,
+        bgScaleMobileRaw: getAnchor('bgScaleMobile', 'bgScaleMobile', undefined as any) as THREE.Vector3 | undefined,
+
+        foregroundAnchorOffset: isMobile 
+            ? getAnchor('fgAnchorMobile', 'fgAnchorMobile', getAnchor('fgAnchor', 'fgAnchor', new THREE.Vector3(3, 0, 0)))
+            : getAnchor('fgAnchor', 'fgAnchor', new THREE.Vector3(3, 0, 0)),
+        backgroundAnchorOffset: isMobile 
+            ? getAnchor('bgAnchorMobile', 'bgAnchorMobile', getAnchor('bgAnchor', 'bgAnchor', new THREE.Vector3(-3, 0, -5)))
+            : getAnchor('bgAnchor', 'bgAnchor', new THREE.Vector3(-3, 0, -5)),
+        foregroundScale: isMobile 
+            ? getAnchor('fgScaleMobile', 'fgScaleMobile', getAnchor('fgScale', 'fgScale', new THREE.Vector3(1, 1, 1))) as THREE.Vector3
+            : getAnchor('fgScale', 'fgScale', new THREE.Vector3(1, 1, 1)) as THREE.Vector3,
+        backgroundScale: isMobile 
+            ? getAnchor('bgScaleMobile', 'bgScaleMobile', getAnchor('bgScale', 'bgScale', new THREE.Vector3(0.5, 0.5, 0.5))) as THREE.Vector3
+            : getAnchor('bgScale', 'bgScale', new THREE.Vector3(0.5, 0.5, 0.5)) as THREE.Vector3,
         foregroundRotation: getEuler('fgRotation', 'fgRotation', new THREE.Euler(0, index * 0.2, 0)),
         backgroundRotation: getEuler('bgRotation', 'bgRotation', new THREE.Euler(0, 0, 0)),
         foregroundBucket: toggleA ? 'A' : 'B',
