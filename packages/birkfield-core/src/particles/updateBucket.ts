@@ -54,22 +54,30 @@ export function updateBucket(bucket: BucketState, dt: number, bloom: number = 1.
 
     const posAlpha = (currentZ - _tempVec.z < -1000.0) ? warpAlpha : alpha;
 
-    positions[i * 3 + 0] = currentX + (_tempVec.x - currentX) * posAlpha;
-    positions[i * 3 + 1] = currentY + (_tempVec.y - currentY) * posAlpha;
-    positions[i * 3 + 2] = currentZ + (_tempVec.z - currentZ) * posAlpha;
+    // Fast-track fading logic for unused points
+    const isInactive = bucket.activeCount !== undefined && i >= bucket.activeCount;
+    // Boost transition speeds strictly for inactive items aggressively vanishing
+    const activePosAlpha = isInactive ? Math.min(alpha * 5.0, 1.0) : posAlpha;
+
+    let nX = currentX + (_tempVec.x - currentX) * activePosAlpha;
+    let nY = currentY + (_tempVec.y - currentY) * activePosAlpha;
+    let nZ = currentZ + (_tempVec.z - currentZ) * activePosAlpha;
 
     // 4. Ease color
     const cR = colors[i * 3 + 0];
     const cG = colors[i * 3 + 1];
     const cB = colors[i * 3 + 2];
 
-    const tR = targetColors[i * 3 + 0] * bloom;
-    const tG = targetColors[i * 3 + 1] * bloom;
-    const tB = targetColors[i * 3 + 2] * bloom;
+    const effectiveBloom = isInactive ? 1.0 : bloom;
 
-    let nextR = cR + (tR - cR) * alpha;
-    let nextG = cG + (tG - cG) * alpha;
-    let nextB = cB + (tB - cB) * alpha;
+    const tR = targetColors[i * 3 + 0] * effectiveBloom;
+    const tG = targetColors[i * 3 + 1] * effectiveBloom;
+    const tB = targetColors[i * 3 + 2] * effectiveBloom;
+
+    const activeAlpha = isInactive ? Math.min(alpha * 5.0, 1.0) : alpha;
+    let nextR = cR + (tR - cR) * activeAlpha;
+    let nextG = cG + (tG - cG) * activeAlpha;
+    let nextB = cB + (tB - cB) * activeAlpha;
 
     // Zeno's paradox ghosting fix: if fully inactive (target 0), drop to absolute 0
     // so that thousands of microscopically faint overlapping points don't aggregate
@@ -79,7 +87,30 @@ export function updateBucket(bucket: BucketState, dt: number, bloom: number = 1.
             nextG = 0;
             nextB = 0;
         }
+    } else if (isInactive) {
+        // In light mode, targets fade to #f0f0f0 (0.941). Zeno's applies here too natively.
+        if (Math.abs(nextR - 0.941) < 0.05 && Math.abs(nextG - 0.941) < 0.05 && Math.abs(nextB - 0.941) < 0.05) {
+            nextR = 0.941;
+            nextG = 0.941;
+            nextB = 0.941;
+        }
     }
+
+    const isFullyFaded = isInactive && ((tR === 0 && nextR < 0.05) || (Math.abs(nextR - 0.941) < 0.05 && Math.abs(nextG - 0.941) < 0.05 && Math.abs(nextB - 0.941) < 0.05));
+
+    if (isFullyFaded) {
+        // Teleport perfectly out of view without corrupting target memory!
+        nX = 0; nY = 0; nZ = 99999;
+    } else if (currentZ > 90000) {
+        // It's waking up! Do a massive Z jump and start transition from slightly behind the object natively.
+        nX = _tempVec.x + (Math.random() - 0.5) * 5.0; 
+        nY = _tempVec.y + (Math.random() - 0.5) * 5.0; 
+        nZ = _tempVec.z - 20.0 - (Math.random() * 10.0);
+    }
+
+    positions[i * 3 + 0] = nX;
+    positions[i * 3 + 1] = nY;
+    positions[i * 3 + 2] = nZ;
 
     colors[i * 3 + 0] = nextR;
     colors[i * 3 + 1] = nextG;

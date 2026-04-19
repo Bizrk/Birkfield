@@ -17,9 +17,9 @@ if (container) {
     bucketSize: 5000,
     defaultConfig: {
       bgShape: 'ringCluster',
-      bgColor1Dark: '#111122',
-      bgColor2Dark: '#221122',
-      bgSize: 0.5,
+      bgColorDark1: '#111122',
+      bgColorDark2: '#221122',
+      bgSizeDark: 0.5,
       bgBloom: 1.0,
       bgTransitionSpeed: 2.0,
       fgTransitionSpeed: 2.0,
@@ -31,8 +31,8 @@ if (container) {
       heroPreset: {
         fgShape: 'tripleSpheres',
         bgShape: 'fiveCubes',
-        fgSize: 0.8,
-        bgSize: 0.15,
+        fgSizeDark: 0.8,
+        bgSizeDark: 0.15,
         fgBloom: 1.5,
         bgBloom: 0.1,
         fgAnchor: '3,0,0',

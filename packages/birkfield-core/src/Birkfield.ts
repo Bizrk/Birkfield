@@ -65,6 +65,20 @@ export interface ConfigPreset {
   fgMouseMax?: string;
   bgMouseMax?: string;
   themeMode?: 'auto' | 'inverted' | 'light' | 'dark';
+  hoverShape?: string;
+  hoverScaleRaw?: string;
+  hoverSizeDark?: number;
+  hoverSizeLight?: number;
+  hoverBloom?: number;
+  hoverJitter?: number;
+  hoverColorDark1?: string;
+  hoverColorDark2?: string;
+  hoverColorLight1?: string;
+  hoverColorLight2?: string;
+  hoverActivePoints?: number;
+  hoverSpinSpeed?: number;
+  hoverLoose?: string;
+  hoverOpacity?: number;
 }
 
 export interface SectionDef {
@@ -143,6 +157,8 @@ export class Birkfield {
   
   public theme: 'dark' | 'light' = 'dark';
   private currentEffectiveTheme: 'dark' | 'light' | '' = '';
+  private currentHoverTarget: HTMLElement | null = null;
+  private isDebug = false;
 
   constructor(options: BirkfieldOptions) {
     this.options = {
@@ -154,6 +170,10 @@ export class Birkfield {
       configs: options.configs || {},
       defaultConfig: options.defaultConfig || {}
     };
+
+    if (typeof window !== 'undefined' && window.location.search.includes('debug=true')) {
+        this.isDebug = true;
+    }
 
     // 1. Setup Scene (Apply optional zIndex layer targeting)
     if (this.options.zIndex !== undefined) {
@@ -185,6 +205,10 @@ export class Birkfield {
     // 5. Start Render Loop
     this.animate = this.animate.bind(this);
     requestAnimationFrame(this.animate);
+
+    if (this.isDebug) {
+        this.logState('Engine Initialized');
+    }
   }
 
   private parseAnchor(val: any, fallback: THREE.Vector3 | undefined): THREE.Vector3 | undefined {
@@ -214,7 +238,7 @@ export class Birkfield {
   }
 
   // Projects a DOM bounding box onto the 3D plane
-  private getDOMObjectTransform(el: HTMLElement | null | undefined, zDepth: number, baseScale: THREE.Vector3): { anchor: THREE.Vector3, scale: THREE.Vector3 } {
+  private getDOMObjectTransform(el: HTMLElement | null | undefined, zDepth: number, baseScale: THREE.Vector3, stretchToFit: boolean = false): { anchor: THREE.Vector3, scale: THREE.Vector3 } {
     if (!el) return { anchor: new THREE.Vector3(0, 0, zDepth), scale: baseScale };
 
     const rect = el.getBoundingClientRect();
@@ -257,9 +281,15 @@ export class Birkfield {
     const fitDimension = Math.min(width3D, height3D);
     const targetScale = fitDimension / 4.0; 
 
+    // A raw loose primitive object spans from -5 to +5 (width 10). 
+    // Dividing by 10 maps the 3D object to the exact DOM pixel bounds securely!
+    const finalScale = stretchToFit
+        ? new THREE.Vector3(width3D / 10.0, height3D / 10.0, 0.05)
+        : new THREE.Vector3(targetScale, targetScale, targetScale);
+
     return { 
         anchor, 
-        scale: new THREE.Vector3(targetScale, targetScale, targetScale)
+        scale: finalScale
     };
   }
 
@@ -306,9 +336,18 @@ export class Birkfield {
           return fallback;
       };
       const getNum = (dsName: string, configKey: keyof ConfigPreset, fallback: number): number => {
-          if (ds[dsName] !== undefined) return parseFloat(ds[dsName]!);
-          if (inlineConfig[configKey] !== undefined) return Number(inlineConfig[configKey]);
-          if (defaultPreset[configKey] !== undefined) return Number(defaultPreset[configKey]);
+          if (ds[dsName] !== undefined) {
+             const val = parseFloat(ds[dsName]!);
+             if (!isNaN(val)) return val;
+          }
+          if (inlineConfig[configKey] !== undefined) {
+             const val = Number(inlineConfig[configKey]);
+             if (!isNaN(val)) return val;
+          }
+          if (defaultPreset[configKey] !== undefined) {
+             const val = Number(defaultPreset[configKey]);
+             if (!isNaN(val)) return val;
+          }
           return fallback;
       };
       const getBool = (dsName: string, configKey: keyof ConfigPreset, fallback: boolean): boolean => {
@@ -437,6 +476,20 @@ export class Birkfield {
       this.mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
     });
 
+    document.body.addEventListener('mouseover', (e: MouseEvent) => {
+      const target = (e.target as HTMLElement).closest('.birkfield-hover-target') as HTMLElement;
+      if (target) {
+        this.currentHoverTarget = target;
+      }
+    });
+
+    document.body.addEventListener('mouseout', (e: MouseEvent) => {
+      const target = (e.target as HTMLElement).closest('.birkfield-hover-target');
+      if (target) {
+        this.currentHoverTarget = null;
+      }
+    });
+
     this.scrollY = window.scrollY;
   }
 
@@ -510,10 +563,23 @@ export class Birkfield {
         
         // Force the section to re-resolve colors instantly!
         this.activeSectionId = ''; 
+        if (this.isDebug && effectiveTheme) {
+            this.logState(`Theme Changed -> ${effectiveTheme}`);
+        }
     }
 
     if (activeSection.id !== this.activeSectionId) {
+      if (this.activeSectionId) {
+        const prevEl = document.getElementById(this.activeSectionId);
+        if (prevEl) prevEl.classList.remove('birkfield-active');
+      }
+
       this.activeSectionId = activeSection.id;
+
+      const activeEl = document.getElementById(this.activeSectionId);
+      if (activeEl) {
+        activeEl.classList.add('birkfield-active');
+      }
       
       const fgShapeData = this.targetCache[activeSection.foregroundShape];
       const bgShapeData = this.targetCache[activeSection.backgroundShape];
@@ -537,6 +603,10 @@ export class Birkfield {
       // Hot-swap the canvas HTML zIndex to weave it through the document
       const activeZ = activeSection.zIndex || (this.options.zIndex !== undefined ? this.options.zIndex.toString() : '1');
       this.options.container.style.zIndex = activeZ;
+
+      if (this.isDebug) {
+          this.logState(`Section Activated -> ${this.activeSectionId}`);
+      }
     }
 
     const bucketAIsForeground = activeSection.foregroundBucket === 'A';
@@ -675,7 +745,93 @@ export class Birkfield {
     updateBucket(this.sys.bucketA, dt, safeBloomA, time, jitterA, fgTransSpeed, getDisruption(this.sys.bucketA), warpA);
     updateBucket(this.sys.bucketB, dt, safeBloomB, time, jitterB, bgTransSpeed, getDisruption(this.sys.bucketB), warpB);
 
+    // ============================================
+    // HOVER / AMBIENT BUCKET (BUCKET C)
+    // ============================================
+    const hoverEl = this.currentHoverTarget;
+    const defConfig = this.options.defaultConfig || {};
+    
+    const getHoverStr = (key: keyof ConfigPreset, fallback: string | undefined): string | undefined => {
+      if (hoverEl && hoverEl.dataset[key] !== undefined) return hoverEl.dataset[key];
+      return defConfig[key] !== undefined ? String(defConfig[key]) : fallback;
+    };
+    const getHoverNum = (key: keyof ConfigPreset, fallback: number): number => {
+      if (hoverEl && hoverEl.dataset[key] !== undefined) return parseFloat(hoverEl.dataset[key]!);
+      return defConfig[key] !== undefined ? Number(defConfig[key]) : fallback;
+    };
+    
+    const resolveHoverColor = (key: keyof ConfigPreset): THREE.Color | undefined => {
+      const val = getHoverStr(key, undefined);
+      return val ? new THREE.Color(val) : undefined;
+    };
+
+    const hoverShapeName = getHoverStr('hoverShape', 'sphere') || 'sphere';
+    const hoverShapeData = this.targetCache[hoverShapeName] || Object.values(this.targetCache)[0];
+    const hc1 = resolveHoverColor(effectiveTheme === 'light' ? 'hoverColorLight1' : 'hoverColorDark1');
+    const hc2 = resolveHoverColor(effectiveTheme === 'light' ? 'hoverColorLight2' : 'hoverColorDark2');
+    
+    // By default ambient buckets stay loose and breathing, but can be forced crisp
+    const hoverLoose = getHoverStr('hoverLoose', 'true') === 'true';
+    const currentHoverShape = hoverEl ? (hoverLoose ? hoverShapeData.loose : hoverShapeData.resolved) : hoverShapeData.loose;
+    const hoverActivePoints = getHoverNum('hoverActivePoints', 300);
+
+    setBucketTarget(this.sys.bucketHover, currentHoverShape, hc1, hc2, hoverActivePoints, effectiveTheme);
+
+    const hScaleStr = getHoverStr('hoverScaleRaw', '1.2,1.2,1.2');
+    const hScale = this.parseAnchor(hScaleStr, new THREE.Vector3(1.2,1.2,1.2))!;
+    let hoverTargetAnchor = new THREE.Vector3();
+    let hoverTargetScale = hScale.clone();
+
+    if (hoverEl) {
+        const domXform = this.getDOMObjectTransform(hoverEl, 0, new THREE.Vector3(1,1,1), true);
+        hoverTargetAnchor = domXform.anchor;
+        hoverTargetScale = domXform.scale.clone().multiply(hScale);
+        
+        this.sys.bucketHover.scale.lerp(hoverTargetScale, dt * 10.0);
+        this.sys.bucketHover.anchor.lerp(hoverTargetAnchor, dt * 10.0);
+        
+        if (this.sys.bucketHover.points.position.z === -10000) this.sys.bucketHover.points.position.z = 0;
+    } else {
+        // Completely scatter into the background and pull away to edges
+        hoverTargetAnchor.set(0, 0, -20);
+        // Slowly enlarge to scatter fully
+        hoverTargetScale.set(4, 4, 4); 
+        this.sys.bucketHover.scale.lerp(hoverTargetScale, dt * 1.5);
+        this.sys.bucketHover.anchor.lerp(hoverTargetAnchor, dt * 1.5);
+    }
+
+    if (this.sys.bucketHover.points.material) {
+        const mat = this.sys.bucketHover.points.material as THREE.PointsMaterial;
+        const hoverSize = getHoverNum(effectiveTheme === 'light' ? 'hoverSizeLight' : 'hoverSizeDark', 0.2);
+        mat.size += (hoverSize - mat.size) * dt * 3;
+        mat.opacity += (getHoverNum('hoverOpacity', 0.3) - mat.opacity) * dt * 3;
+        mat.blending = effectiveTheme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending;
+        mat.map = effectiveTheme === 'light' ? this.sys.bucketHover.textureSolid : this.sys.bucketHover.textureBloom;
+    }
+
+    // Keep it rotating and breathing
+    const hoverSpin = getHoverNum('hoverSpinSpeed', 0.05); // Ultra slow rotation
+    applyIdleMotion(this.sys.bucketHover, this.sys.bucketHover.baseRotation, time, true, 0.2, 0, 0, new THREE.Vector2(), hoverSpin);
+
+    const hoverBloom = getHoverNum('hoverBloom', 2.0);
+    const safeHoverBloom = effectiveTheme === 'light' ? Math.min(hoverBloom, 1.0) : hoverBloom;
+    const hoverJitter = getHoverNum('hoverJitter', 0.6); // Very loose/jittery swarm
+
+    updateBucket(this.sys.bucketHover, dt, safeHoverBloom, time, hoverJitter, 3.0, 0.0, 5.0);
+
     this.renderer.render(this.scene, this.camera);
+
+  }
+
+  private logState(event: string) {
+    if (!this.isDebug) return;
+    console.group(`[Birkfield Debug] ${event}`);
+    console.log(`Active Section: ${this.activeSectionId || 'NONE'}`);
+    console.log(`Theme: ${this.currentEffectiveTheme || 'auto'}`);
+    console.log(`Bucket A: ${this.sys.bucketA.activeCount} points (Scale: ${this.sys.bucketA.scale.toArray().map(v=>v.toFixed(2)).join(',')}, Blending: Additive)`);
+    console.log(`Bucket B: ${this.sys.bucketB.activeCount} points (Scale: ${this.sys.bucketB.scale.toArray().map(v=>v.toFixed(2)).join(',')}, Blending: Additive)`);
+    console.log(`Bucket Hover: ${this.sys.bucketHover.activeCount} points (Opacity: ${(this.sys.bucketHover.points.material as THREE.PointsMaterial).opacity.toFixed(2)})`);
+    console.groupEnd();
   }
 
   public destroy() {

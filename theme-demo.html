@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Birkfield Thematic Engine Demo</title>
+  <link rel="stylesheet" href="/src/style.css" />
+
+  <style>
+    /* Premium Base Aesthetic */
+    body {
+        margin: 0;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        background-color: #0d0f12;
+        color: #fff;
+        transition: background-color 0.5s ease, color 0.5s ease;
+        overflow-x: hidden;
+    }
+    
+    /* Toggle mechanism using body class */
+    body.light-mode {
+        background-color: #f0f4f8;
+        color: #111;
+    }
+    
+    h1, h2, p { font-weight: 300; margin-top: 0; }
+    h2 { font-size: 2.5em; font-weight: 700; margin-bottom: 0.5em; }
+    p { line-height: 1.6; opacity: 0.8; font-size: 1.1em; }
+    
+    #theme-btn {
+      position: fixed;
+      top: 30px;
+      right: 30px;
+      z-index: 10000;
+      padding: 12px 24px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.4);
+      color: #fff;
+      backdrop-filter: blur(8px);
+      cursor: pointer;
+      font-size: 0.9em;
+      transition: all 0.3s ease;
+      font-weight: 600;
+    }
+    body.light-mode #theme-btn { 
+        background: rgba(255, 255, 255, 0.8); 
+        color: #000; 
+        border-color: rgba(0, 0, 0, 0.1); 
+    }
+    #theme-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    #canvas-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    #scroll-container {
+      position: relative;
+      /* Removed z-index to allow canvas weaving through layered child z-indexes */
+    }
+
+    .section-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1; /* Sits perfectly behind the fixed z-index: 0 canvas! */
+      transition: background-color 0.5s ease;
+    }
+
+    .birkfield-section {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 0 10vw;
+      position: relative;
+      box-sizing: border-box;
+    }
+    
+    /* Alternating text alignments */
+    .align-right { justify-content: flex-end; text-align: right; }
+    .align-left { justify-content: flex-start; text-align: left; }
+    
+    .content {
+      max-width: 450px;
+      z-index: 10;
+      background: rgba(20,20,20,0.5);
+      padding: 3em;
+      border-radius: 20px;
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.08);
+      transition: all 0.5s ease;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+    
+    body.light-mode .content {
+        background: rgba(255,255,255,0.7);
+        border: 1px solid rgba(0,0,0,0.05);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.05);
+    }
+    
+    .target-box {
+      position: absolute;
+      width: 450px;
+      height: 450px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      background: radial-gradient(circle at center, rgba(255,255,255,0.03) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    
+    body.light-mode .target-box {
+        border-color: rgba(0, 0, 0, 0.05);
+        background: radial-gradient(circle at center, rgba(0,0,0,0.03) 0%, transparent 70%);
+    }
+
+    /* Target positions */
+    .box-left { left: 10vw; top: 50%; transform: translateY(-50%); }
+    .box-right { right: 10vw; top: 50%; transform: translateY(-50%); }
+    
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 100px;
+      font-size: 0.8em;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 20px;
+      background: rgba(255,255,255,0.1);
+    }
+    body.light-mode .badge {
+        background: rgba(0,0,0,0.1);
+    }
+    
+  </style>
+</head>
+<body>
+  <button id="theme-btn">Toggle System Theme</button>
+  <div id="canvas-container"></div>
+
+  <div id="scroll-container">
+    
+    <!-- AUTO MODE -->
+    <section id="section-auto" class="birkfield-section align-right" data-theme-mode="auto" 
+             data-fg-shape="tripleSpheres" data-bg-shape="cylinderTower"
+             data-fg-size-dark="0.8" data-bg-size-dark="0.1"
+             data-fg-scale="0.4,0.4,0.4"
+             data-fg-color-dark1="#00e5ff" data-fg-color-dark2="#ffaa00"
+             data-fg-color-light1="#0055ff" data-fg-color-light2="#ff5500"
+             data-fg-active-points="1600" data-bg-active-points="500">
+      <div class="content">
+        <div class="badge">Theme: Auto</div>
+        <h2>Adaptive Context</h2>
+        <p>This layout implicitly inherits the global website theme state. When the system is dark, the particles glow brightly. When you invert the global page theme, it hot-swaps to its defined Light-Mode color arrays seamlessly.</p>
+      </div>
+      <div class="birkfield-fg target-box box-left"></div>
+    </section>
+
+    <!-- INVERTED MODE -->
+    <section id="section-inverted" class="birkfield-section align-left" data-theme-mode="inverted" 
+             data-fg-shape="fiveCubes" data-bg-shape="tripleSpheres"
+             data-fg-size-dark="0.6" data-bg-size-dark="0.1"
+             data-fg-scale="0.5,0.5,0.5"
+             data-fg-rotation-speed="0.8"
+             data-fg-color-dark1="#ffaa00" data-fg-color-dark2="#00ff55"
+             data-fg-color-light1="#8800ff" data-fg-color-light2="#ff00aa"
+             data-bg-color-dark1="#222" data-bg-color-dark2="#444"
+             data-fg-active-points="1200" data-bg-active-points="400">
+      
+      <!-- Inverted dynamic background! Uses strict CSS to flip base colors -->
+      <style>
+        #section-inverted .section-bg { background-color: #f0f4f8; }
+        body.light-mode #section-inverted .section-bg { background-color: #0d0f12; }
+      </style>
+      <div class="section-bg"></div>
+
+      <div class="content">
+        <div class="badge">Theme: Inverted</div>
+        <h2>Opposite State</h2>
+        <p>Designed implicitly to oppose the container context. If your website is dark, this visual element forces its `light-mode` styling parameters. This creates tremendous visual tension and contrast for highlight panels!</p>
+      </div>
+      <div class="birkfield-fg target-box box-right"></div>
+    </section>
+
+    <!-- STRICT DARK -->
+    <section id="section-dark" class="birkfield-section align-right" data-theme-mode="dark" 
+             data-fg-shape="tripleSpheres" data-bg-shape="fiveCubes"
+             data-fg-size-dark="1.2" data-bg-size-dark="0.1"
+             data-fg-scale="0.3,0.3,0.3"
+             data-fg-color-dark1="#ff0055" data-fg-color-dark2="#ffff00"
+             data-fg-active-points="800" data-bg-active-points="400">
+             
+      <div class="section-bg" style="background-color: #050608;"></div>
+
+      <div class="content" style="background: rgba(15,15,20,0.9); color: white; border-color: rgba(255,255,255,0.1);">
+        <div class="badge" style="background: rgba(255,255,255,0.1); color: white;">Theme: Dark</div>
+        <h2>Strict Dark Lock</h2>
+        <p>Regardless of what the user does with the website theme toggle above, this section forces an explicit Dark-mode processing state—always rendering high-definition additive bloom gradients securely.</p>
+      </div>
+      <div class="birkfield-fg target-box box-left"></div>
+    </section>
+
+    <!-- STRICT LIGHT -->
+    <section id="section-light" class="birkfield-section align-left" data-theme-mode="light" 
+             data-fg-shape="fiveCubes" data-bg-shape="tripleSpheres"
+             data-fg-size-light="0.4" data-bg-size-light="0.1"
+             data-fg-scale="0.4,0.4,0.4"
+             data-fg-color-light1="#1155ff" data-fg-color-light2="#00aa55"
+             data-fg-active-points="1500" data-bg-active-points="600">
+             
+      <div class="section-bg" style="background-color: #ffffff;"></div>
+
+      <div class="content" style="background: rgba(250,250,250,0.9); color: #111; border-color: rgba(0,0,0,0.1);">
+        <div class="badge" style="background: rgba(0,0,0,0.1); color: #111;">Theme: Light</div>
+        <h2>Strict Light Lock</h2>
+        <p>This layout maintains an unyielding Light Mode implementation. The engine automatically swaps to multiplicative blending logic, dropping bloom passes entirely, to guarantee visual clarity on bright backgrounds.</p>
+      </div>
+      <div class="birkfield-fg target-box box-right"></div>
+    </section>
+
+    <!-- OUTRO -->
+    <section id="section-outro" class="birkfield-section" style="justify-content: center; text-align: center; height: 50vh;">
+      <h2 style="font-weight: 800; font-size: 4em; letter-spacing: -2px; opacity: 0.1;">BIRKFIELD</h2>
+    </section>
+    
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

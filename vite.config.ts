@@ -4,7 +4,7 @@ import { resolve } from 'path';
 export default defineConfig({
   resolve: {
     alias: {
-      '@birkfield/core': resolve(__dirname, './packages/birkfield-core/src/index.ts')
+      '@bizrk/birkfield': resolve(__dirname, './packages/birkfield-core/src/index.ts')
     }
   }
 });
